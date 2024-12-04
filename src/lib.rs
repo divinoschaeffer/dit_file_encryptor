@@ -1,5 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io;
+use std::path::{Path, PathBuf};
 use flate2::Compression;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
@@ -7,7 +8,7 @@ use flate2::write::GzEncoder;
 /// Represents a file that supports gzip compression and decompression.
 pub struct CompressedFile {
     /// Path to the file on the filesystem.
-    path: String,
+    path: PathBuf,
 }
 
 impl CompressedFile {
@@ -23,10 +24,10 @@ impl CompressedFile {
     ///
     /// Returns a `Result` containing a new `CompressedFile` instance if successful,
     /// or an `io::Error` if the file cannot be created.
-    pub fn create_file(path: &str) -> Result<CompressedFile, io::Error> {
-        File::create(path)?;
+    pub fn create_file(path: PathBuf) -> Result<CompressedFile, io::Error> {
+        File::create(path.clone())?;
         Ok(Self {
-            path: path.to_string(),
+            path,
         })
     }
 
