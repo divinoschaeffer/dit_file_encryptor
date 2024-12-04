@@ -1,6 +1,8 @@
 use std::fs::{File, OpenOptions};
 use std::io;
-use std::path::{Path, PathBuf};
+use std::io::{Read, Write};
+use std::path::PathBuf;
+
 use flate2::Compression;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
@@ -50,11 +52,11 @@ impl CompressedFile {
     ///
     /// # Returns
     ///
-    /// Returns a `Result` containing a `GzDecoder` wrapped around the file if successful,
+    /// Returns a `Result` containing a `Box<dyn Read>` if successful,
     /// or an `io::Error` if the file cannot be opened or read.
-    pub fn open_for_read(&self) -> Result<GzDecoder<File>, io::Error> {
+    pub fn open_for_read(&self) -> Result<Box<dyn Read>, io::Error> {
         let file = File::open(&self.path)?;
-        Ok(GzDecoder::new(file))
+        Ok(Box::new(GzDecoder::new(file)))
     }
 
     /// Opens the file for writing and compresses its content on the fly.
@@ -66,13 +68,13 @@ impl CompressedFile {
     ///
     /// # Returns
     ///
-    /// Returns a `Result` containing a `GzEncoder` wrapped around the file if successful,
+    /// Returns a `Result` containing a `Box<dyn Write>` if successful,
     /// or an `io::Error` if the file cannot be opened or written.
-    pub fn open_for_write(&self, append: bool) -> Result<GzEncoder<File>, io::Error> {
+    pub fn open_for_write(&self, append: bool) -> Result<Box<dyn Write>, io::Error> {
         let file = OpenOptions::new()
             .write(true)
             .append(append)
             .open(&self.path)?;
-        Ok(GzEncoder::new(file, Compression::default()))
+        Ok(Box::new(GzEncoder::new(file, Compression::default())))
     }
 }
