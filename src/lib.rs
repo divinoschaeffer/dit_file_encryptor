@@ -18,7 +18,7 @@ impl CompressedFile {
     ///
     /// # Arguments
     ///
-    /// * `path` - A string slice that specifies the path where the file will be created.
+    /// * `path` - A `PathBuf` that specifies the path where the file will be created.
     ///
     /// # Returns
     ///
@@ -29,6 +29,21 @@ impl CompressedFile {
         Ok(Self {
             path,
         })
+    }
+
+    /// Creates an object compressed from the specified path.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - A string slice that specifies the path where the file will be created.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `CompressedFile` instance.
+    pub fn new(path: PathBuf) -> Self{
+        Self {
+            path
+        }
     }
 
     /// Opens the file for reading and decompresses its content on the fly.
