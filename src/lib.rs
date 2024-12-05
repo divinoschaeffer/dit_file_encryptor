@@ -70,10 +70,9 @@ impl CompressedFile {
     ///
     /// Returns a `Result` containing a `Box<dyn Write>` if successful,
     /// or an `io::Error` if the file cannot be opened or written.
-    pub fn open_for_write(&self, append: bool) -> Result<Box<dyn Write>, io::Error> {
+    pub fn open_for_write(&self) -> Result<Box<dyn Write>, io::Error> {
         let file = OpenOptions::new()
             .write(true)
-            .append(append)
             .create(true)
             .open(&self.path)?;
         Ok(Box::new(GzEncoder::new(file, Compression::default())))
@@ -154,7 +153,7 @@ mod tests {
         // Write to the compressed file
         let compressed_file = CompressedFile::create_file(path.clone()).unwrap();
         {
-            let mut writer = compressed_file.open_for_write(false).unwrap();
+            let mut writer = compressed_file.open_for_write().unwrap();
             writer.write_all(content).unwrap();
             writer.flush().unwrap();
         }
@@ -176,7 +175,7 @@ mod tests {
         // Write the first line
         {
             let compressed_file = CompressedFile::new(path.clone());
-            let mut writer = compressed_file.open_for_write(false).unwrap();
+            let mut writer = compressed_file.open_for_write().unwrap();
             writer.write_all(content1).unwrap();
             writer.flush().unwrap();
         }
@@ -215,7 +214,7 @@ mod tests {
         let path = create_temp_file("nonexistent_file_write.gz");
 
         let compressed_file = CompressedFile::new(path.clone());
-        let result = compressed_file.open_for_write(false);
+        let result = compressed_file.open_for_write();
 
         // Writing should create the file even if it doesn't exist
         assert!(result.is_ok());
