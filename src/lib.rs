@@ -146,7 +146,7 @@ impl CompressedFile {
     ///
     /// - This method is less efficient for very large files as it reads and rewrites the entire file
     /// - The file must be opened with both read and write permissions
-    pub fn write_hash_file_gz(hash: String, file: &mut File, pos: u64) -> Result<(), io::Error> {
+    pub fn write_string_file_gz(hash: String, file: &mut File, pos: u64) -> Result<(), io::Error> {
 
         let mut existing_content = Vec::new();
         let mut gz_reader = GzDecoder::new(file.try_clone().unwrap());
@@ -294,7 +294,7 @@ mod tests {
 
         // Write hash at a specific position
         let hash_to_write = "new_hash_value".to_string();
-        CompressedFile::write_hash_file_gz(hash_to_write.clone(), &mut file, 6).unwrap();
+        CompressedFile::write_string_file_gz(hash_to_write.clone(), &mut file, 6).unwrap();
 
         // Read back the content to verify
         let mut reader = File::open(&file_path).unwrap();
@@ -308,6 +308,6 @@ mod tests {
         expected_content[6..6+hash_bytes.len()].copy_from_slice(hash_bytes);
 
         // Assert that the content matches
-        assert_eq!(decompressed_content, expected_content);
+        assert_eq!(expected_content, decompressed_content);
     }
 }
