@@ -118,54 +118,54 @@ impl CompressedFile {
 
         Ok(())
     }
+}
 
-    /// Writes a hash to a specific position in a gzip-compressed file while preserving the rest of the content.
-    ///
-    /// This function reads the entire compressed file, modifies the content at the specified position,
-    /// and then rewrites the entire file with the modifications.
-    ///
-    /// # Parameters
-    ///
-    /// - `hash`: The hash value to be written to the file.
-    /// - `file`: A reference to the file to be modified.
-    /// - `pos`: The position (byte offset) where the hash should be written.
-    ///
-    /// # Returns
-    ///
-    /// - `Ok(())` if the hash was successfully written
-    /// - `Err(io::Error)` if there was an issue reading or writing the file
-    ///
-    /// # Behavior
-    ///
-    /// - Reads the entire content of the gzip-compressed file
-    /// - Replaces the content at the specified position with the new hash
-    /// - Extends the content if the position is beyond the current file length
-    /// - Rewrites the entire file, maintaining the gzip compression
-    ///
-    /// # Notes
-    ///
-    /// - This method is less efficient for very large files as it reads and rewrites the entire file
-    /// - The file must be opened with both read and write permissions
-    pub fn write_string_file_gz(hash: String, file: &mut File, pos: u64) -> Result<(), io::Error> {
+/// Writes a hash to a specific position in a gzip-compressed file while preserving the rest of the content.
+///
+/// This function reads the entire compressed file, modifies the content at the specified position,
+/// and then rewrites the entire file with the modifications.
+///
+/// # Parameters
+///
+/// - `hash`: The hash value to be written to the file.
+/// - `file`: A reference to the file to be modified.
+/// - `pos`: The position (byte offset) where the hash should be written.
+///
+/// # Returns
+///
+/// - `Ok(())` if the hash was successfully written
+/// - `Err(io::Error)` if there was an issue reading or writing the file
+///
+/// # Behavior
+///
+/// - Reads the entire content of the gzip-compressed file
+/// - Replaces the content at the specified position with the new hash
+/// - Extends the content if the position is beyond the current file length
+/// - Rewrites the entire file, maintaining the gzip compression
+///
+/// # Notes
+///
+/// - This method is less efficient for very large files as it reads and rewrites the entire file
+/// - The file must be opened with both read and write permissions
+pub fn write_string_file_gz(hash: String, file: &mut File, pos: u64) -> Result<(), io::Error> {
 
-        let mut existing_content = Vec::new();
-        let mut gz_reader = GzDecoder::new(file.try_clone().unwrap());
-        gz_reader.read_to_end(&mut existing_content)?;
+    let mut existing_content = Vec::new();
+    let mut gz_reader = GzDecoder::new(file.try_clone().unwrap());
+    gz_reader.read_to_end(&mut existing_content)?;
 
-        let hash_bytes = hash.as_bytes();
-        if pos as usize + hash_bytes.len() > existing_content.len() {
-            // Extend the content if needed
-            existing_content.resize(pos as usize + hash_bytes.len(), 0);
-        }
-        existing_content[pos as usize..pos as usize + hash_bytes.len()].copy_from_slice(hash_bytes);
-
-        file.seek(SeekFrom::Start(0))?;
-        let mut gz_writer = GzEncoder::new(file, Compression::default());
-        gz_writer.write_all(&existing_content)?;
-        gz_writer.finish()?;
-
-        Ok(())
+    let hash_bytes = hash.as_bytes();
+    if pos as usize + hash_bytes.len() > existing_content.len() {
+        // Extend the content if needed
+        existing_content.resize(pos as usize + hash_bytes.len(), 0);
     }
+    existing_content[pos as usize..pos as usize + hash_bytes.len()].copy_from_slice(hash_bytes);
+
+    file.seek(SeekFrom::Start(0))?;
+    let mut gz_writer = GzEncoder::new(file, Compression::default());
+    gz_writer.write_all(&existing_content)?;
+    gz_writer.finish()?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -294,7 +294,7 @@ mod tests {
 
         // Write hash at a specific position
         let hash_to_write = "new_hash_value".to_string();
-        CompressedFile::write_string_file_gz(hash_to_write.clone(), &mut file, 6).unwrap();
+        write_string_file_gz(hash_to_write.clone(), &mut file, 6).unwrap();
 
         // Read back the content to verify
         let mut reader = File::open(&file_path).unwrap();
