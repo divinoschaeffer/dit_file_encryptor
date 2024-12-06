@@ -1,6 +1,6 @@
 use std::fs::{File, OpenOptions};
 use std::io;
-use std::io::{Read, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::PathBuf;
 
 use flate2::Compression;
@@ -118,6 +118,54 @@ impl CompressedFile {
 
         Ok(())
     }
+
+    /// Writes a hash to a specific position in a gzip-compressed file while preserving the rest of the content.
+    ///
+    /// This function reads the entire compressed file, modifies the content at the specified position,
+    /// and then rewrites the entire file with the modifications.
+    ///
+    /// # Parameters
+    ///
+    /// - `hash`: The hash value to be written to the file.
+    /// - `file`: A reference to the file to be modified.
+    /// - `pos`: The position (byte offset) where the hash should be written.
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())` if the hash was successfully written
+    /// - `Err(io::Error)` if there was an issue reading or writing the file
+    ///
+    /// # Behavior
+    ///
+    /// - Reads the entire content of the gzip-compressed file
+    /// - Replaces the content at the specified position with the new hash
+    /// - Extends the content if the position is beyond the current file length
+    /// - Rewrites the entire file, maintaining the gzip compression
+    ///
+    /// # Notes
+    ///
+    /// - This method is less efficient for very large files as it reads and rewrites the entire file
+    /// - The file must be opened with both read and write permissions
+    pub fn write_hash_file_gz(hash: String, file: &mut File, pos: u64) -> Result<(), io::Error> {
+
+        let mut existing_content = Vec::new();
+        let mut gz_reader = GzDecoder::new(file.try_clone().unwrap());
+        gz_reader.read_to_end(&mut existing_content)?;
+
+        let hash_bytes = hash.as_bytes();
+        if pos as usize + hash_bytes.len() > existing_content.len() {
+            // Extend the content if needed
+            existing_content.resize(pos as usize + hash_bytes.len(), 0);
+        }
+        existing_content[pos as usize..pos as usize + hash_bytes.len()].copy_from_slice(hash_bytes);
+
+        file.seek(SeekFrom::Start(0))?;
+        let mut gz_writer = GzEncoder::new(file, Compression::default());
+        gz_writer.write_all(&existing_content)?;
+        gz_writer.finish()?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -219,5 +267,47 @@ mod tests {
         // Writing should create the file even if it doesn't exist
         assert!(result.is_ok());
         assert!(path.exists());
+    }
+
+    #[test]
+    fn test_write_hash_file_gz() {
+        // Create a temporary file
+        let file_path = create_temp_file("test_hash_file.gz");
+        let file = File::create(&file_path).unwrap();
+
+        // Initial content to write
+        let initial_content = b"Hello world, this is some initial content!";
+
+        // Compress initial content
+        {
+            let mut gz_writer = GzEncoder::new(&file, Compression::default());
+            gz_writer.write_all(initial_content).unwrap();
+            gz_writer.finish().unwrap();
+        }
+
+        // Reopen the file for reading and writing
+        let mut file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&file_path)
+            .unwrap();
+
+        // Write hash at a specific position
+        let hash_to_write = "new_hash_value".to_string();
+        CompressedFile::write_hash_file_gz(hash_to_write.clone(), &mut file, 6).unwrap();
+
+        // Read back the content to verify
+        let mut reader = File::open(&file_path).unwrap();
+        let mut gz_reader = GzDecoder::new(&mut reader);
+        let mut decompressed_content = Vec::new();
+        gz_reader.read_to_end(&mut decompressed_content).unwrap();
+
+        // Construct expected content
+        let mut expected_content = initial_content.to_vec();
+        let hash_bytes = hash_to_write.as_bytes();
+        expected_content[6..6+hash_bytes.len()].copy_from_slice(hash_bytes);
+
+        // Assert that the content matches
+        assert_eq!(decompressed_content, expected_content);
     }
 }
