@@ -105,10 +105,11 @@ impl CompressedFile {
     pub fn append_to_file(&self, text: &[u8]) -> Result<(), io::Error> {
         let mut existing_content = Vec::new();
         if self.path.exists() {
-            let mut reader = self.open_for_read()?;
-            reader.read_to_end(&mut existing_content)?;
+            if self.path.metadata()?.len() > 0 {
+                let mut reader = self.open_for_read()?;
+                reader.read_to_end(&mut existing_content)?;
+            }
         }
-
         let combined_content = [existing_content, text.to_vec()].concat();
 
         let file = File::create(&self.path)?;
@@ -313,5 +314,26 @@ mod tests {
 
         // Assert that the content matches
         assert_eq!(expected_content, decompressed_content);
+    }
+
+    #[test]
+    fn test_append_to_nonexistent_or_empty_file() {
+        let path = create_temp_file("test_empty_append.gz");
+
+        // S'assurer que le fichier n'existe pas
+        if path.exists() {
+            std::fs::remove_file(&path).unwrap();
+        }
+
+        let compressed_file = CompressedFile::new(path.clone());
+
+        // Essayer d'appeler append_to_file sur un fichier inexistant
+        assert!(compressed_file.append_to_file(b"Test data").is_ok());
+
+        // Vérifier que les données sont bien ajoutées
+        let mut reader = compressed_file.open_for_read().unwrap();
+        let mut content = Vec::new();
+        reader.read_to_end(&mut content).unwrap();
+        assert_eq!(content, b"Test data");
     }
 }
