@@ -148,19 +148,23 @@ impl CompressedFile {
 /// - This method is less efficient for very large files as it reads and rewrites the entire file
 /// - The file must be opened with both read and write permissions
 pub fn write_string_file_gz(hash: String, file: &mut File, pos: u64) -> Result<(), io::Error> {
-
     let mut existing_content = Vec::new();
-    let mut gz_reader = GzDecoder::new(file.try_clone().unwrap());
-    gz_reader.read_to_end(&mut existing_content)?;
+
+    if file.metadata()?.len() > 0 {
+        let mut gz_reader = GzDecoder::new(file.try_clone()?);
+        gz_reader.read_to_end(&mut existing_content)?;
+    }
 
     let hash_bytes = hash.as_bytes();
+
     if pos as usize + hash_bytes.len() > existing_content.len() {
-        // Extend the content if needed
         existing_content.resize(pos as usize + hash_bytes.len(), 0);
     }
+
     existing_content[pos as usize..pos as usize + hash_bytes.len()].copy_from_slice(hash_bytes);
 
     file.seek(SeekFrom::Start(0))?;
+
     let mut gz_writer = GzEncoder::new(file, Compression::default());
     gz_writer.write_all(&existing_content)?;
     gz_writer.finish()?;
