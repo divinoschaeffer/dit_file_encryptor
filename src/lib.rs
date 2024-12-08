@@ -114,7 +114,7 @@ impl CompressedFile {
         let file = File::create(&self.path)?;
         let mut writer = GzEncoder::new(file, Compression::default());
         writer.write_all(&combined_content)?;
-        writer.flush()?;
+        writer.finish()?;
 
         Ok(())
     }
